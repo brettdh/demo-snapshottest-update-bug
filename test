@@ -1,0 +1,43 @@
+#!/bin/bash
+
+set -o pipefail
+
+snapshot_file=snapshots/snap_test_snapshot_update.py
+
+snapshot_is_modified() {
+  git status | grep -q $snapshot_file
+}
+
+reset_snapshot() {
+  git checkout -- $snapshot_file
+}
+
+verify_snapshot_modified() {
+  if ! snapshot_is_modified ; then
+    echo "Snapshot should have been updated but was not"
+  else
+    echo "Snapshot modified as expected"
+    reset_snapshot
+  fi
+}
+
+run() {
+  local cmd=$1
+  echo "Running '$cmd'"
+  $cmd
+}
+
+if snapshot_is_modified ; then
+  echo >&2 "Snapshots are already modified; please ensure clean git status"
+  exit 1
+fi
+
+run "poetry run nosetests --snapshot-update test_snapshot_update.py:UpdateTest"
+
+verify_snapshot_modified
+
+echo ""
+
+run "poetry run nosetests --snapshot-update test_snapshot_update.py"
+
+verify_snapshot_modified
